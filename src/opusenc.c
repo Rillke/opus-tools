@@ -245,8 +245,13 @@ static inline void print_time(double seconds)
   if(seconds>0)fprintf(stderr," %0.4g second%s",seconds,seconds!=1?"s":"");
 }
 
-int main(int argc, char **argv)
+int encode_buffer(
+	int argc,
+	char **argv,
+	void(*progress)( int, int, double )
+)
 {
+  (*progress)( 0, 0, 0 );
   static const input_format raw_format = {NULL, 0, raw_open, wav_close, "raw",N_("RAW file reader")};
   int option_index=0;
   struct option long_options[] =
@@ -816,7 +821,7 @@ int main(int argc, char **argv)
 #endif
     fout=stdout;
   }else{
-    fout=fopen_utf8(outFile, "wb");
+    fout=fopen_utf8(outFile, "wb+");
     if(!fout){
       perror(outFile);
       exit(1);
@@ -1020,11 +1025,13 @@ int main(int argc, char **argv)
         }else estbitrate=nbBytes*8*((double)coding_rate/frame_size);
         fprintf(stderr,"\r");
         for(i=0;i<last_spin_len;i++)fprintf(stderr," ");
-        if(inopt.total_samples_per_channel>0 && inopt.total_samples_per_channel<nb_encoded){
+        if(inopt.total_samples_per_channel>0){
           snprintf(sbuf,54,"\r[%c] %02d%% ",spinner[last_spin&3],
           (int)floor(nb_encoded/(double)(inopt.total_samples_per_channel+inopt.skip)*100.));
+          (*progress)( nb_encoded, inopt.total_samples_per_channel+inopt.skip, coded_seconds );
         }else{
           snprintf(sbuf,54,"\r[%c] ",spinner[last_spin&3]);
+          (*progress)( 0, 0, coded_seconds );
         }
         last_spin_len=strlen(sbuf);
         snprintf(sbuf+last_spin_len,54-last_spin_len,
@@ -1066,7 +1073,9 @@ int main(int argc, char **argv)
     if(max_ogg_delay>(frame_size*(48000/coding_rate)*4))fprintf(stderr,"    (use libogg 1.3 or later for lower overhead)\n");
 #endif
     fprintf(stderr,"\n");
+    (*progress)( 100, 100, coded_seconds );
   }
+  (*progress)( 100, 100, -1 );
 
   opus_multistream_encoder_destroy(st);
   ogg_stream_clear(&os);
