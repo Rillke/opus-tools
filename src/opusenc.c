@@ -521,6 +521,11 @@ int encode_buffer(
           }
           if(opt_ctls==0)opt_ctls_ctlval=malloc(sizeof(int)*3);
           else opt_ctls_ctlval=realloc(opt_ctls_ctlval,sizeof(int)*(opt_ctls+1)*3);
+          if(!opt_ctls_ctlval)
+          {
+            fprintf(stderr, "Memory allocation failure.\n");
+            exit(1);
+          }
           opt_ctls_ctlval[opt_ctls*3]=target;
           opt_ctls_ctlval[opt_ctls*3+1]=atoi(tpos+1);
           opt_ctls_ctlval[opt_ctls*3+2]=atoi(spos+1);
@@ -644,6 +649,17 @@ int encode_buffer(
 
   if(!in_format){
     fprintf(stderr,"Error parsing input file: %s\n",inFile);
+    exit(1);
+  }
+
+  if(inopt.rate<100||inopt.rate>768000){
+    /*Crazy rates excluded to avoid excessive memory usage for padding/resampling.*/
+    fprintf(stderr,"Error parsing input file: %s unhandled sampling rate: %ld hz\n",inFile,inopt.rate);
+    exit(1);
+  }
+
+  if(inopt.channels>255||inopt.channels<1){
+    fprintf(stderr,"Error parsing input file: %s unhandled number of channels: %d\n",inFile,inopt.channels);
     exit(1);
   }
 
