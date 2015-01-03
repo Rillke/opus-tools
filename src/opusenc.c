@@ -390,7 +390,7 @@ int encode_buffer(
   /*Vendor string should just be the encoder library,
     the ENCODER comment specifies the tool used.*/
   comment_init(&inopt.comments, &inopt.comments_length, opus_version);
-  snprintf(ENCODER_string, sizeof(ENCODER_string), "opusenc from %s %s",PACKAGE_NAME,PACKAGE_VERSION);
+  snprintf(ENCODER_string, sizeof(ENCODER_string), "opus-tools/opusenc https://blog.rillke.com/opusenc.js/ from %s %s",PACKAGE_NAME,PACKAGE_VERSION);
   comment_add(&inopt.comments, &inopt.comments_length, "ENCODER", ENCODER_string);
 
   /*Process command-line options*/
