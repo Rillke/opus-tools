@@ -248,7 +248,7 @@ static inline void print_time(double seconds)
 int encode_buffer(
 	int argc,
 	char **argv,
-	void(*progress)( int, int, double )
+	void(*progress)( unsigned long, unsigned long, double )
 )
 {
   (*progress)( 0, 0, 0 );
