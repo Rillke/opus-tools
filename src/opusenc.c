@@ -348,7 +348,11 @@ static int is_valid_ctl(int request)
   return 0;
 }
 
-int main(int argc, char **argv)
+int encode_buffer(
+	int argc,
+	char **argv,
+	void(*progress)( int, int, double )
+)
 {
   static const input_format raw_format = {NULL, 0, raw_open, wav_close, "raw",N_("RAW file reader")};
   struct option long_options[] =
@@ -442,6 +446,8 @@ int main(int argc, char **argv)
   char **argv_utf8;
 #endif
 
+  (*progress)( 0, 0, 0 );
+
   if (query_cpu_support()) {
     fprintf(stderr,"\n\n** WARNING: This program was compiled with SSE%s\n",query_cpu_support()>1?"2":"");
     fprintf(stderr,"            but this CPU claims to lack these instructions. **\n\n");
@@ -477,7 +483,7 @@ int main(int argc, char **argv)
   opus_version=opus_get_version_string();
   /*Vendor string should just be the encoder library,
     the ENCODER comment specifies the tool used.*/
-  snprintf(ENCODER_string, sizeof(ENCODER_string), "opusenc from %s %s",PACKAGE_NAME,PACKAGE_VERSION);
+  snprintf(ENCODER_string, sizeof(ENCODER_string), "opus-tools/opusenc https://blog.rillke.com/opusenc.js/ from %s %s",PACKAGE_NAME,PACKAGE_VERSION);
   ret = ope_comments_add(inopt.comments, "ENCODER", ENCODER_string);
   if (ret != OPE_OK) {
     fatal("Error: failed to add ENCODER comment: %s\n", ope_strerror(ret));
@@ -1018,7 +1024,7 @@ int main(int argc, char **argv)
 #endif
     data.fout=stdout;
   } else {
-    data.fout=fopen_utf8(outFile, "wb");
+    data.fout=fopen_utf8(outFile, "wb+");
     if (!data.fout) {
       perror(outFile);
       exit(1);
@@ -1062,6 +1068,12 @@ int main(int argc, char **argv)
               /(double)(inopt.total_samples_per_channel+lookahead)*100.));
         } else {
           snprintf(sbuf,54,"\r[%c] ",spinner[last_spin&3]);
+        }
+        if (inopt.total_samples_per_channel>0) {
+          (*progress)( (int)data.nb_encoded,
+            (int)(inopt.total_samples_per_channel+lookahead), coded_seconds );
+        } else {
+          (*progress)( 0, 0, coded_seconds );
         }
         last_spin_len=(int)strlen(sbuf);
         snprintf(sbuf+last_spin_len,54-last_spin_len,
@@ -1116,6 +1128,7 @@ int main(int argc, char **argv)
         (data.bytes_written-data.total_bytes)/(double)data.bytes_written*100.);
     }
     fprintf(stderr,"\n");
+    (*progress)( 100, 100, coded_seconds );
   }
 
   ope_encoder_destroy(enc);
@@ -1130,5 +1143,8 @@ int main(int argc, char **argv)
 #ifdef WIN_UNICODE
   free_commandline_arguments_utf8(&argc_utf8, &argv_utf8);
 #endif
+  /*Signal completion only after the output file has been closed (and thus
+    flushed) by ope_encoder_destroy(), so the caller can safely read it.*/
+  (*progress)( 100, 100, -1 );
   return 0;
 }
